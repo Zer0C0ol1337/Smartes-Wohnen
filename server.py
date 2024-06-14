@@ -1,78 +1,65 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import serial
 import time
+from fastapi import FastAPI
+from starlette.staticfiles import StaticFiles
+from starlette.requests import Request
+from typing import Optional
+import logging
 
-# COM-Port festlegen (COM3 in diesem Fall)
-ser = serial.Serial('COM3', 9600, timeout=1)
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Warten, um sicherzustellen, dass die Verbindung hergestellt wird
-time.sleep(2)
+# Define serial port settings
+SERIAL_PORT = 'COM3'
+SERIAL_BAUDRATE = 9600
+TIMEOUT = 1
 
-# Klasse für den Webserver
-class RequestHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        if self.path == '/':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            
-            # Lese den Inhalt der index.html-Datei
-            with open('index.html', 'rb') as file:
-                html_content = file.read()
-                
-            # Sende den Inhalt der index.html-Datei als Antwort
-            self.wfile.write(html_content)
-        elif self.path == '/get_temperature':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
-            self.end_headers()
-            
-            # Befehl zum Anfordern der Temperatur vom Arduino senden
-            ser.write(b'Request_Temperature')
+# Initialize serial communication
+try:
+    ser = serial.Serial(SERIAL_PORT, SERIAL_BAUDRATE, timeout=TIMEOUT)
+    logging.info('Serial connection established on %s at %s baud rate', SERIAL_PORT, SERIAL_BAUDRATE)
+except serial.SerialException as e:
+    logging.error('Failed to open serial port: %s', e)
+    exit()
 
-            # Antwort vom Arduino lesen
-            temperature = ser.readline().decode().strip()
+# Define functions for handling requests
 
-            # Überprüfen, ob eine gültige Temperatur erhalten wurde
-            if temperature.startswith('temp:'):
-                temperature_value = temperature.split(':')[1]
-                self.wfile.write(temperature_value.encode())
-            else:
-                self.wfile.write(b'--')
-        elif self.path == '/styles.css':
-            self.send_response(200)
-            self.send_header('Content-type', 'text/css')
-            self.end_headers()
-            
-            # Lese den Inhalt der styles.css-Datei
-            with open('styles.css', 'rb') as file:
-                css_content = file.read()
-                
-            # Sende den Inhalt der styles.css-Datei als Antwort
-            self.wfile.write(css_content)
-        elif self.path == '/script.js':
-            self.send_response(200)
-            self.send_header('Content-type', 'application/javascript')
-            self.end_headers()
-            
-            # Lese den Inhalt der script.js-Datei
-            with open('script.js', 'rb') as file:
-                js_content = file.read()
-                
-            # Sende den Inhalt der script.js-Datei als Antwort
-            self.wfile.write(js_content)
+
+def get_temperature():
+    try:
+        ser.write(b'Request_Temperature')
+        temperature_response = ser.readline().decode().strip()
+
+        if temperature_response.startswith('temp:'):
+            temperature_value = temperature_response.split(':')[1]
+            logging.info('Received temperature: %s', temperature_value)
+            return temperature_value
         else:
-            self.send_response(404)
-            self.end_headers()
-            self.wfile.write(b'404 Not Found')
+            raise ValueError('Invalid temperature response')
+
+    except serial.SerialException:
+        logging.error('Error communicating with Arduino during temperature request')
+        return None
+
+    except ValueError:
+        logging.error('Invalid temperature data received: %s', temperature_response)
+        return None
+
+
+app = FastAPI()
+
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+
+@app.get("/get_temperature")
+async def get_temperature_api():
+    temperature = get_temperature()
+    if temperature is not None:
+        return {temperature}
+    else:
+        return {"error": "Failed to retrieve temperature"}
 
 # Webserver starten
-def webserver():
-    print('Starting server...')
-    server_address = ('', 8000)
-    httpd = HTTPServer(server_address, RequestHandler)
-    print('Server running on port 8000...')
-    httpd.serve_forever()
-
-# Starten des Webservers
-webserver()
+if __name__ == '__main__':
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
