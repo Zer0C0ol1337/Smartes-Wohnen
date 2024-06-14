@@ -4,8 +4,8 @@ import mysql.connector
 try:
     connection = mysql.connector.connect(
         host="localhost",
-        user="dave",
-        password="topstar14",
+        user="x",
+        password="x",
         database="smart_fridge"
     )
     if connection.is_connected():
