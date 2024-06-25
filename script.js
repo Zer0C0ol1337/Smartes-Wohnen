@@ -67,39 +67,3 @@ document.addEventListener('DOMContentLoaded', function() {
 //////////////////////////////////////
 /////Produkt hinzufügen Popup
 //////////////////////////////////////
-
-document.addEventListener('DOMContentLoaded', function() {
-    var addProductBtn = document.getElementById('add-product-btn');
-    var productIframeContainer = document.getElementById('product-iframe-container');
-    var closeIframeBtn = document.getElementById('close-iframe-btn');
-    var productIframe = document.getElementById('product-iframe');
-
-    addProductBtn.addEventListener('click', function() {
-        productIframeContainer.style.display = 'block';
-    });
-
-    closeIframeBtn.addEventListener('click', function() {
-        productIframeContainer.style.display = 'none';
-    });
-
-    // Funktion zum Hinzufügen des Produkts zur Datenbank
-    window.addEventListener('message', function(event) {
-        if (event.data && event.data.action === 'addProduct') {
-            var product = event.data.product;
-
-            // Sende Produktdaten an den Server
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', '/add_product', true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState == 4 && xhr.status == 200) {
-                    alert('Produkt hinzugefügt: ' + product);
-                    productIframeContainer.style.display = 'none';
-                } else if (xhr.readyState == 4) {
-                    alert('Fehler beim Hinzufügen des Produkts');
-                }
-            };
-            xhr.send('product=' + encodeURIComponent(product));
-        }
-    });
-});
