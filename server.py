@@ -42,10 +42,10 @@ def get_temperature():
         return {'error': 'Failed to retrieve temperature'}
 
 # MySQL connection parameters
-MYSQL_HOST = 'localhost'
-MYSQL_USER = 'dave'
-MYSQL_PASSWORD = 'topstar14'
-MYSQL_DATABASE = 'smart_fridge'
+MYSQL_HOST = 'xxxx'
+MYSQL_USER = 'xxxx'
+MYSQL_PASSWORD = 'xxxx'
+MYSQL_DATABASE = 'xxxx'
 
 # Establish a MySQL connection
 def get_mysql_connection():
